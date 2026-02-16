@@ -35,12 +35,16 @@ public class SqlBulkCopyExporterTests
         var schema = SchemaCreate.Create()
             .Entity<Company>(e => e.Key(c => c.Id))
             .Entity<Product>(e => e.Key(p => p.Id))
-            .Entity<Customer>(e => e
-                .Key(c => c.Id)
-                .Relation<Company>(c => c.CompanyId))
-            .Entity<Order>(e => e
-                .Key(o => o.Id)
-                .Relation<Customer>(o => o.CustomerId))
+            .Entity<Customer>(e =>
+            {
+                e.Key(c => c.Id);
+                e.Relation<Company>(c => c.CompanyId);
+            })
+            .Entity<Order>(e =>
+            {
+                e.Key(o => o.Id);
+                e.Relation<Customer>(o => o.CustomerId);
+            })
             .Build();
 
         var generator = new DataGenerator();

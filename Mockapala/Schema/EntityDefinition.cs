@@ -36,8 +36,9 @@ public sealed class EntityDefinition<T> : IEntityDefinition where T : class
     /// <summary>
     /// Sets the key property using an expression (e.g. c => c.Id).
     /// The key is used for identity and for resolving foreign keys.
+    /// Returns a <see cref="KeyBuilder{T,TKey}"/> for optional chaining of <c>.WithGenerator()</c>.
     /// </summary>
-    public EntityDefinition<T> Key<TKey>(Expression<Func<T, TKey>> keySelector)
+    public KeyBuilder<T, TKey> Key<TKey>(Expression<Func<T, TKey>> keySelector) where TKey : notnull
     {
         if (keySelector == null)
             throw new ArgumentNullException(nameof(keySelector));
@@ -63,7 +64,7 @@ public sealed class EntityDefinition<T> : IEntityDefinition where T : class
         if (_setKey == null)
             throw new ArgumentException("Key must be a writable property or field.", nameof(keySelector));
 
-        return this;
+        return new KeyBuilder<T, TKey>(this);
     }
 
     private void BuildSetter(MemberInfo member)
@@ -74,31 +75,9 @@ public sealed class EntityDefinition<T> : IEntityDefinition where T : class
             _setKey = (obj, value) => field.SetValue(obj, value);
     }
 
-    /// <summary>
-    /// Sets a custom key generator that produces the key value from the 1-based sequential index.
-    /// </summary>
-    public EntityDefinition<T> KeyGenerator<TKey>(Func<int, TKey> generator) where TKey : notnull
+    internal void SetCustomKeyGenerator(Func<int, object> generator)
     {
-        _ = KeyType; // ensure Key() was called
-        if (generator == null)
-            throw new ArgumentNullException(nameof(generator));
-        _customKeyGenerator = i => generator(i);
-        return this;
-    }
-
-    /// <summary>
-    /// Sets a custom key generator with a raw-to-key conversion (for strongly-typed IDs).
-    /// </summary>
-    public EntityDefinition<T> KeyGenerator<TRaw, TKey>(Func<int, TRaw> generator, Func<TRaw, TKey> conversion)
-        where TKey : notnull
-    {
-        _ = KeyType;
-        if (generator == null)
-            throw new ArgumentNullException(nameof(generator));
-        if (conversion == null)
-            throw new ArgumentNullException(nameof(conversion));
-        _customKeyGenerator = i => conversion(generator(i))!;
-        return this;
+        _customKeyGenerator = generator;
     }
 
     /// <summary>

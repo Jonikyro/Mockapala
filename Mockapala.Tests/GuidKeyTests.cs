@@ -33,8 +33,7 @@ public class GuidKeyTests
         var schema = SchemaCreate.Create()
             .Entity<GuidEntity>(e =>
             {
-                e.Key(g => g.Id);
-                e.KeyGenerator(KeyGenerators.NewGuid);
+                e.Key(g => g.Id).WithGenerator(_ => Guid.NewGuid());
             })
             .Build();
 
@@ -54,8 +53,7 @@ public class GuidKeyTests
         var schema = SchemaCreate.Create()
             .Entity<GuidEntity>(e =>
             {
-                e.Key(g => g.Id);
-                e.KeyGenerator<Guid>(i => new Guid(i, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+                e.Key(g => g.Id).WithGenerator(i => new Guid(i, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
             })
             .Build();
 
@@ -74,8 +72,7 @@ public class GuidKeyTests
         var schema = SchemaCreate.Create()
             .Entity<StringKeyEntity>(e =>
             {
-                e.Key(s => s.Code);
-                e.KeyGenerator(KeyGenerators.StringFormat("ORD-{0:D4}"));
+                e.Key(s => s.Code).WithGenerator(i => $"ORD-{i:D4}");
             })
             .Build();
 
