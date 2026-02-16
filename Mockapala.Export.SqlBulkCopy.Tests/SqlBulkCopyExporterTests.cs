@@ -7,11 +7,8 @@ using Xunit;
 
 namespace Mockapala.Export.SqlBulkCopy.Tests;
 
-public class SqlBulkCopyExporterTests
+public class SqlBulkCopyExporterUnitTests
 {
-    private const string LocalTestConnectionString =
-        "Server=localhost,1433;Database=TestShit;User Id=sa;Password=Password123!;TrustServerCertificate=true;";
-
     [Fact]
     public void Export_ThrowsNotSupportedException_WithMessageToUseExportToDatabase()
     {
@@ -26,12 +23,21 @@ public class SqlBulkCopyExporterTests
             exporter.Export(schema, result, new MemoryStream()));
         Assert.Contains("ExportToDatabase", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
+}
+
+[Collection(SqlServerTestCollection.Name)]
+public class SqlBulkCopyExporterTests
+{
+    private readonly SqlServerContainerFixture _fixture;
+
+    public SqlBulkCopyExporterTests(SqlServerContainerFixture fixture)
+    {
+        _fixture = fixture;
+    }
 
     [Fact]
     public void ExportToDatabase_InsertsAllTables()
     {
-        var connectionString = Environment.GetEnvironmentVariable("TestSqlServerConnectionString") ?? LocalTestConnectionString;
-
         var schema = SchemaCreate.Create()
             .Entity<Company>(e => e.Key(c => c.Id))
             .Entity<Product>(e => e.Key(p => p.Id))
@@ -47,6 +53,8 @@ public class SqlBulkCopyExporterTests
             })
             .Build();
 
+        _fixture.ResetDatabase(schema);
+
         var generator = new DataGenerator();
         var result = generator.Generate(schema, cfg => cfg
             .Count<Company>(3)
@@ -56,25 +64,24 @@ public class SqlBulkCopyExporterTests
             .Seed(42));
 
         var exporter = new SqlBulkCopyExporter(new SqlBulkCopyExportOptions { UseDataReader = true });
-        exporter.ExportToDatabase(schema, result, connectionString);
+        exporter.ExportToDatabase(schema, result, _fixture.ConnectionString);
 
-        AssertRowCount(connectionString, "Company", 3);
-        AssertRowCount(connectionString, "Product", 5);
-        AssertRowCount(connectionString, "Customer", 10);
-        AssertRowCount(connectionString, "Order", 20);
+        AssertRowCount("Company", 3);
+        AssertRowCount("Product", 5);
+        AssertRowCount("Customer", 10);
+        AssertRowCount("Order", 20);
     }
 
     [Fact]
     public void ExportToDatabase_WithUseDataReader_InsertsRows()
     {
-        var connectionString = Environment.GetEnvironmentVariable("TestSqlServerConnectionString");
-        if (string.IsNullOrWhiteSpace(connectionString))
-            return;
-
         var schema = SchemaCreate.Create()
             .Entity<Company>(e => e.Key(c => c.Id))
             .Entity<Product>(e => e.Key(p => p.Id))
             .Build();
+
+        _fixture.ResetDatabase(schema);
+
         var generator = new DataGenerator();
         var result = generator.Generate(schema, cfg => cfg
             .Count<Company>(2)
@@ -82,23 +89,22 @@ public class SqlBulkCopyExporterTests
             .Seed(42));
 
         var exporter = new SqlBulkCopyExporter(new SqlBulkCopyExportOptions { UseDataReader = true });
-        exporter.ExportToDatabase(schema, result, connectionString);
+        exporter.ExportToDatabase(schema, result, _fixture.ConnectionString);
 
-        AssertRowCount(connectionString, "Company", 2);
-        AssertRowCount(connectionString, "Product", 3);
+        AssertRowCount("Company", 2);
+        AssertRowCount("Product", 3);
     }
 
     [Fact]
     public void ExportToDatabase_WithUseDataReaderFalse_InsertsSameRowCounts()
     {
-        var connectionString = Environment.GetEnvironmentVariable("TestSqlServerConnectionString");
-        if (string.IsNullOrWhiteSpace(connectionString))
-            return;
-
         var schema = SchemaCreate.Create()
             .Entity<Company>(e => e.Key(c => c.Id))
             .Entity<Product>(e => e.Key(p => p.Id))
             .Build();
+
+        _fixture.ResetDatabase(schema);
+
         var generator = new DataGenerator();
         var result = generator.Generate(schema, cfg => cfg
             .Count<Company>(2)
@@ -106,19 +112,18 @@ public class SqlBulkCopyExporterTests
             .Seed(43));
 
         var exporter = new SqlBulkCopyExporter(new SqlBulkCopyExportOptions { UseDataReader = false });
-        exporter.ExportToDatabase(schema, result, connectionString);
+        exporter.ExportToDatabase(schema, result, _fixture.ConnectionString);
 
-        AssertRowCount(connectionString, "Company", 2);
-        AssertRowCount(connectionString, "Product", 3);
+        AssertRowCount("Company", 2);
+        AssertRowCount("Product", 3);
     }
 
-    private static void AssertRowCount(string connectionString, string tableName, int expectedCount)
+    private void AssertRowCount(string tableName, int expectedCount)
     {
-        using var connection = new SqlConnection(connectionString);
+        using var connection = new SqlConnection(_fixture.ConnectionString);
         connection.Open();
         using var cmd = new SqlCommand($"SELECT COUNT(*) FROM [{tableName}]", connection);
         var count = Convert.ToInt32(cmd.ExecuteScalar());
-        Assert.True(count >= expectedCount,
-            $"Table [{tableName}] should have at least {expectedCount} row(s), but has {count}. (Other tests may have inserted rows.)");
+        Assert.Equal(expectedCount, count);
     }
 }
