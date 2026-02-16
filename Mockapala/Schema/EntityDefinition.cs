@@ -14,6 +14,7 @@ public sealed class EntityDefinition<T> : IEntityDefinition where T : class
     private Type? _keyType;
     private Func<int, object>? _customKeyGenerator;
     private readonly List<IRelationDefinition> _relations = new();
+    private readonly List<PropertyConversion> _conversions = new();
 
     internal Action<Bogus.Faker<T>>? FakerRules { get; private set; }
 
@@ -29,6 +30,8 @@ public sealed class EntityDefinition<T> : IEntityDefinition where T : class
     public Func<int, object>? CustomKeyGenerator => _customKeyGenerator;
 
     public IReadOnlyList<IRelationDefinition> Relations => _relations;
+
+    public IReadOnlyList<PropertyConversion> Conversions => _conversions;
 
     /// <summary>
     /// Sets the key property using an expression (e.g. c => c.Id).
@@ -150,6 +153,28 @@ public sealed class EntityDefinition<T> : IEntityDefinition where T : class
         if (targetKeySelector == null)
             throw new ArgumentNullException(nameof(targetKeySelector));
         return Relation<TTarget>(foreignKeySelector);
+    }
+
+    /// <summary>
+    /// Configures a property for conversion. Returns a <see cref="PropertyBuilder{T,TProp}"/>
+    /// for chaining <c>.HasConversion()</c>.
+    /// </summary>
+    public PropertyBuilder<T, TProp> Property<TProp>(Expression<Func<T, TProp>> propertySelector)
+    {
+        if (propertySelector == null)
+            throw new ArgumentNullException(nameof(propertySelector));
+
+        var member = GetMemberFromExpression(propertySelector)
+            ?? throw new ArgumentException("Expression must be simple member access (e.g. e => e.Name).", nameof(propertySelector));
+
+        return new PropertyBuilder<T, TProp>(this, member.Name, member);
+    }
+
+    internal void AddConversion(PropertyConversion conversion)
+    {
+        // Replace existing conversion for the same property
+        _conversions.RemoveAll(c => c.PropertyName == conversion.PropertyName);
+        _conversions.Add(conversion);
     }
 
     private static MemberInfo? GetMemberFromExpression(LambdaExpression expr)

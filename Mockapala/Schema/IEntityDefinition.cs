@@ -19,4 +19,9 @@ public interface IEntityDefinition
     /// Returns the relations declared on this entity.
     /// </summary>
     IReadOnlyList<IRelationDefinition> Relations { get; }
+
+    /// <summary>
+    /// Returns the property conversions declared on this entity.
+    /// </summary>
+    IReadOnlyList<PropertyConversion> Conversions { get; }
 }

@@ -1,5 +1,6 @@
 using System.Data;
 using System.Reflection;
+using Mockapala.Export;
 
 namespace Mockapala.Export.SqlBulkCopy;
 
@@ -9,13 +10,13 @@ namespace Mockapala.Export.SqlBulkCopy;
 internal sealed class EntityDataReader : IDataReader
 {
     private readonly IReadOnlyList<object> _entities;
-    private readonly IReadOnlyList<PropertyInfo> _properties;
+    private readonly IReadOnlyList<ExportableProperty> _properties;
     private int _currentIndex = -1;
     private bool _closed;
 
     public EntityDataReader(
         IReadOnlyList<object> entities,
-        IReadOnlyList<PropertyInfo> properties)
+        IReadOnlyList<ExportableProperty> properties)
     {
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
         _properties = properties ?? throw new ArgumentNullException(nameof(properties));
@@ -48,21 +49,21 @@ internal sealed class EntityDataReader : IDataReader
     {
         if (i < 0 || i >= _properties.Count)
             throw new IndexOutOfRangeException(nameof(i));
-        return _properties[i].Name;
+        return _properties[i].Property.Name;
     }
 
     public Type GetFieldType(int i)
     {
         if (i < 0 || i >= _properties.Count)
             throw new IndexOutOfRangeException(nameof(i));
-        var t = _properties[i].PropertyType;
+        var t = _properties[i].EffectiveType;
         return Nullable.GetUnderlyingType(t) ?? t;
     }
 
     public int GetOrdinal(string name)
     {
         for (var i = 0; i < _properties.Count; i++)
-            if (string.Equals(_properties[i].Name, name, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(_properties[i].Property.Name, name, StringComparison.OrdinalIgnoreCase))
                 return i;
         throw new IndexOutOfRangeException(nameof(name));
     }

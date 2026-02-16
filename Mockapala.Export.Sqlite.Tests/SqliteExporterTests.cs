@@ -178,4 +178,106 @@ public class SqliteExporterTests
             columns.Add(reader.GetString(1)); // column 1 is "name"
         Assert.Contains(columnName, columns);
     }
+
+    [Fact]
+    public void ExportToDatabase_WithConversion_AppliesConverter()
+    {
+        var schema = SchemaCreate.Create()
+            .Entity<ConvertibleEntity>(e =>
+            {
+                e.Key(c => c.Id);
+                e.Property(c => c.Status).HasConversion(s => s.ToString());
+            })
+            .Build();
+
+        var generator = new DataGenerator();
+        var data = generator.Generate(schema, cfg => cfg.Count<ConvertibleEntity>(3).Seed(42));
+
+        var connStr = "Data Source=ConversionTest;Mode=Memory;Cache=Shared";
+        using var keepAlive = new SqliteConnection(connStr);
+        keepAlive.Open();
+
+        var exporter = new SqliteExporter();
+        exporter.ExportToDatabase(schema, data, connStr);
+
+        // Verify the Status column exists and contains string values
+        AssertColumnExists(keepAlive, "ConvertibleEntity", "Status");
+
+        using var cmd = keepAlive.CreateCommand();
+        cmd.CommandText = "SELECT \"Status\" FROM \"ConvertibleEntity\";";
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            var value = reader.GetString(0);
+            Assert.Contains(value, new[] { "Pending", "Active", "Closed" });
+        }
+    }
+
+    [Fact]
+    public void ExportToDatabase_WithConversion_NonScalarBecomesExportable()
+    {
+        var schema = SchemaCreate.Create()
+            .Entity<EntityWithAddress>(e =>
+            {
+                e.Key(c => c.Id);
+                e.Property(c => c.HomeAddress).HasConversion(a => $"{a.Street}, {a.City}");
+            })
+            .Build();
+
+        var generator = new DataGenerator();
+        var data = generator.Generate(schema, cfg => cfg.Count<EntityWithAddress>(2).Seed(42));
+
+        // Set addresses on the generated entities (since Bogus won't fill complex types)
+        var entities = data.Get<EntityWithAddress>();
+        entities[0].HomeAddress = new SimpleAddress { Street = "123 Main", City = "Springfield" };
+        entities[1].HomeAddress = new SimpleAddress { Street = "456 Oak", City = "Shelbyville" };
+
+        var connStr = "Data Source=NonScalarConvTest;Mode=Memory;Cache=Shared";
+        using var keepAlive = new SqliteConnection(connStr);
+        keepAlive.Open();
+
+        var exporter = new SqliteExporter();
+        exporter.ExportToDatabase(schema, data, connStr);
+
+        AssertColumnExists(keepAlive, "EntityWithAddress", "HomeAddress");
+        AssertRowCount(keepAlive, "EntityWithAddress", 2);
+
+        using var cmd = keepAlive.CreateCommand();
+        cmd.CommandText = "SELECT \"HomeAddress\" FROM \"EntityWithAddress\" ORDER BY \"Id\";";
+        using var reader = cmd.ExecuteReader();
+        reader.Read();
+        Assert.Equal("123 Main, Springfield", reader.GetString(0));
+        reader.Read();
+        Assert.Equal("456 Oak, Shelbyville", reader.GetString(0));
+    }
+
+    [Fact]
+    public void ExportToDatabase_ScalarConversion_OverridesValue()
+    {
+        var schema = SchemaCreate.Create()
+            .Entity<Product>(e =>
+            {
+                e.Key(p => p.Id);
+                e.Property(p => p.Price).HasConversion(p => (int)(p * 100));
+            })
+            .Build();
+
+        var generator = new DataGenerator();
+        var data = generator.Generate(schema, cfg => cfg.Count<Product>(1).Seed(42));
+
+        var product = data.Get<Product>()[0];
+        product.Price = 19.99m;
+
+        var connStr = "Data Source=ScalarConvTest;Mode=Memory;Cache=Shared";
+        using var keepAlive = new SqliteConnection(connStr);
+        keepAlive.Open();
+
+        var exporter = new SqliteExporter();
+        exporter.ExportToDatabase(schema, data, connStr);
+
+        using var cmd = keepAlive.CreateCommand();
+        cmd.CommandText = "SELECT \"Price\" FROM \"Product\";";
+        var value = Convert.ToInt32(cmd.ExecuteScalar());
+        Assert.Equal(1999, value);
+    }
 }

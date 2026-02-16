@@ -43,15 +43,16 @@ public sealed class SqlBulkCopyExporter : ISchemaDataExporter
             if (list.Count == 0)
                 continue;
 
-            var properties = GetScalarProperties(entityType);
-            if (properties.Count == 0)
+            var definition = schema.Entities.FirstOrDefault(e => e.EntityType == entityType);
+            var exportable = ExportableProperty.GetExportableProperties(entityType, definition);
+            if (exportable.Count == 0)
                 continue;
 
             var tableName = _options.GetTableName(entityType);
 
             if (_options.UseDataReader)
             {
-                using var reader = new EntityDataReader(list, properties);
+                using var reader = new EntityDataReader(list, exportable);
                 using var bulkCopy = new Microsoft.Data.SqlClient.SqlBulkCopy(connection, _options.BulkCopyOptions, null)
                 {
                     DestinationTableName = tableName
@@ -62,7 +63,7 @@ public sealed class SqlBulkCopyExporter : ISchemaDataExporter
             }
             else
             {
-                var dataTable = BuildDataTable(list, properties);
+                var dataTable = BuildDataTable(list, exportable);
                 using var bulkCopy = new Microsoft.Data.SqlClient.SqlBulkCopy(connection, _options.BulkCopyOptions, null)
                 {
                     DestinationTableName = tableName
@@ -99,13 +100,13 @@ public sealed class SqlBulkCopyExporter : ISchemaDataExporter
             || t == typeof(byte[]);
     }
 
-    private static DataTable BuildDataTable(IReadOnlyList<object> entities, IReadOnlyList<PropertyInfo> properties)
+    private static DataTable BuildDataTable(IReadOnlyList<object> entities, IReadOnlyList<ExportableProperty> properties)
     {
         var table = new DataTable();
         foreach (var p in properties)
         {
-            var colType = Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType;
-            table.Columns.Add(p.Name, colType);
+            var colType = Nullable.GetUnderlyingType(p.EffectiveType) ?? p.EffectiveType;
+            table.Columns.Add(p.Property.Name, colType);
         }
         foreach (var entity in entities)
         {

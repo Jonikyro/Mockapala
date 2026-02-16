@@ -45,16 +45,17 @@ public sealed class SqliteExporter : ISchemaDataExporter
             if (list.Count == 0)
                 continue;
 
-            var properties = GetScalarProperties(entityType);
-            if (properties.Count == 0)
+            var definition = schema.Entities.FirstOrDefault(e => e.EntityType == entityType);
+            var exportable = ExportableProperty.GetExportableProperties(entityType, definition);
+            if (exportable.Count == 0)
                 continue;
 
             var tableName = _options.GetTableName(entityType);
 
             if (_options.CreateTables)
-                CreateTable(connection, tableName, properties);
+                CreateTable(connection, tableName, exportable);
 
-            InsertRows(connection, tableName, properties, list);
+            InsertRows(connection, tableName, exportable, list);
         }
 
         transaction.Commit();
@@ -84,19 +85,19 @@ public sealed class SqliteExporter : ISchemaDataExporter
         }
     }
 
-    private void CreateTable(SqliteConnection connection, string tableName, IReadOnlyList<PropertyInfo> properties)
+    private void CreateTable(SqliteConnection connection, string tableName, IReadOnlyList<ExportableProperty> properties)
     {
         var columns = string.Join(", ", properties.Select(p =>
-            $"{_options.QuoteColumn(p.Name)} {GetSqliteColumnType(p.PropertyType)}"));
+            $"{_options.QuoteColumn(p.Property.Name)} {GetSqliteColumnType(p.EffectiveType)}"));
 
         using var cmd = connection.CreateCommand();
         cmd.CommandText = $"CREATE TABLE IF NOT EXISTS {tableName} ({columns});";
         cmd.ExecuteNonQuery();
     }
 
-    private void InsertRows(SqliteConnection connection, string tableName, IReadOnlyList<PropertyInfo> properties, IReadOnlyList<object> entities)
+    private void InsertRows(SqliteConnection connection, string tableName, IReadOnlyList<ExportableProperty> properties, IReadOnlyList<object> entities)
     {
-        var columnNames = string.Join(", ", properties.Select(p => _options.QuoteColumn(p.Name)));
+        var columnNames = string.Join(", ", properties.Select(p => _options.QuoteColumn(p.Property.Name)));
         var paramNames = string.Join(", ", properties.Select((_, i) => $"$p{i}"));
 
         using var cmd = connection.CreateCommand();
@@ -106,7 +107,7 @@ public sealed class SqliteExporter : ISchemaDataExporter
         var parameters = new SqliteParameter[properties.Count];
         for (var i = 0; i < properties.Count; i++)
         {
-            var param = new SqliteParameter($"$p{i}", GetSqliteParamType(properties[i].PropertyType));
+            var param = new SqliteParameter($"$p{i}", GetSqliteParamType(properties[i].EffectiveType));
             cmd.Parameters.Add(param);
             parameters[i] = param;
         }
