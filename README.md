@@ -1,4 +1,4 @@
-<img align="left" src="Images/logo-300x300.png" alt="Mockapala logo" width="90" />
+<img align="left" src="Images/logo_300x300.png" alt="Mockapala logo" width="90" />
 
 # Mockapala
 

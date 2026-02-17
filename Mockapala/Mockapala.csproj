@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -6,14 +6,33 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Mockapala</RootNamespace>
     <AssemblyName>Mockapala</AssemblyName>
-    <PackageId>Mockapala</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.0-alpha</Version>
     <Description>Type-safe test data generator with relations, optional FKs, selector strategies, flexible counts, post-processing, and prefill.</Description>
-    <Authors>Mockapala</Authors>
+    <Authors>Jonikyro</Authors>
+      
+    <PackageId>Mockapala</PackageId>
+    <PackageTags>test;data;test-data;seed;seeding</PackageTags>
+    <PackageIcon>logo_128x128.png</PackageIcon>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/Jonikyro/Mockapala</RepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+      
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EmbedUntrackedSources>false</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Bogus" Version="35.6.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../Images/logo_128x128.png" Pack="true" Visible="false" PackagePath="" />
+    <None Include="../LICENSE" Pack="true" Visible="false" PackagePath="" />
+    <None Include="../README.md" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
 
 </Project>
