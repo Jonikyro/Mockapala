@@ -3,9 +3,14 @@ name: Publish To NuGet
 #on:
   #push:
     #tags:
-    #  - 'v*.*.*'
+    #  - '*.*.**'
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 1.0.0)'
+        required: true
+        default: '0.1.0-alpha.1'
 
 jobs:
   test:
@@ -45,6 +50,11 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      - name: Set version
+        run: |
+          sed -i -e 's/{{Version}}/${{ github.event.inputs.version }}/' ./Mockapala.csproj
+        working-directory: Mockapala
 
       - name: Build and Pack
         run: dotnet pack --configuration Release --output artifacts

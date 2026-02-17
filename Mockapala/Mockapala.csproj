@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Mockapala</RootNamespace>
     <AssemblyName>Mockapala</AssemblyName>
-    <Version>0.1.0-alpha</Version>
+    <Version>{{Version}}</Version>
     <Description>Type-safe test data generator with relations, optional FKs, selector strategies, flexible counts, post-processing, and prefill.</Description>
     <Authors>Jonikyro</Authors>
       
