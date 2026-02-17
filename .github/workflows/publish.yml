@@ -53,7 +53,7 @@ jobs:
 
       - name: Set version
         run: |
-          sed -i -e 's/{{Version}}/${{ github.event.inputs.version }}/' ./Mockapala.csproj
+          sed -i -e 's/0.1.0-alpha.1/${{ github.event.inputs.version }}/' ./Mockapala.csproj
         working-directory: Mockapala
 
       - name: Build and Pack
