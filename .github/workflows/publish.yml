@@ -1,16 +1,9 @@
 name: Publish To NuGet
 
-#on:
-  #push:
-    #tags:
-    #  - '*.*.**'
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to publish (e.g. 1.0.0)'
-        required: true
-        default: '0.1.0-alpha.1'
+  push:
+    tags:
+      - 'v*.*.**'
 
 jobs:
   test:
@@ -53,7 +46,7 @@ jobs:
 
       - name: Set version
         run: |
-          sed -i -e 's/0.1.0-alpha.1/${{ github.event.inputs.version }}/' ./Mockapala.csproj
+          sed -i -e 's/0.1.0-alpha.1/${{ github.ref_name }}/' ./Mockapala.csproj
         working-directory: Mockapala
 
       - name: Build and Pack
