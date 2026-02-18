@@ -246,6 +246,35 @@ Transform property values at export time:
 
 Exporters see the converted type via `ExportableProperty.EffectiveType`, so they can map it to the appropriate target type (e.g. `string` → `NVARCHAR(MAX)` or `TEXT`).
 
+## Export Metadata
+
+Define table and column names in the schema. Exporters use these as defaults — no need to configure each exporter separately.
+
+### Table Names
+
+```csharp
+.Entity<Order>(e =>
+{
+    e.Key(o => o.Id);
+    e.ToTable("orders");
+})
+```
+
+### Column Names
+
+```csharp
+.Entity<Order>(e =>
+{
+    e.Key(o => o.Id);
+    e.Property(o => o.CustomerId).HasColumnName("customer_id");
+    e.Property(o => o.Status).HasColumnName("status").HasConversion(s => s.ToString());
+})
+```
+
+`HasColumnName` and `HasConversion` can be chained in any order. Exporters read column names via `ExportableProperty.ColumnName` (defaults to the property name when not set).
+
+Exporter-specific options like `TableNameResolver` take priority over schema metadata.
+
 ## Exporters
 
 Mockapala provides two interfaces for building exporters:

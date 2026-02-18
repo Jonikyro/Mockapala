@@ -36,4 +36,16 @@ public sealed class PropertyBuilder<T, TProp> where T : class
         _entity.AddConversion(conversion);
         return this;
     }
+
+    /// <summary>
+    /// Sets the column name to use when exporting this property.
+    /// </summary>
+    public PropertyBuilder<T, TProp> HasColumnName(string columnName)
+    {
+        if (string.IsNullOrWhiteSpace(columnName))
+            throw new ArgumentException("Column name cannot be null or empty.", nameof(columnName));
+
+        _entity.AddColumnName(_propertyName, columnName);
+        return this;
+    }
 }

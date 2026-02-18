@@ -15,6 +15,8 @@ public sealed class EntityDefinition<T> : IEntityDefinition where T : class
     private Func<int, object>? _customKeyGenerator;
     private readonly List<IRelationDefinition> _relations = new();
     private readonly List<PropertyConversion> _conversions = new();
+    private string? _tableName;
+    private readonly Dictionary<string, string> _columnNames = new();
 
     internal Action<Bogus.Faker<T>>? FakerRules { get; private set; }
 
@@ -32,6 +34,21 @@ public sealed class EntityDefinition<T> : IEntityDefinition where T : class
     public IReadOnlyList<IRelationDefinition> Relations => _relations;
 
     public IReadOnlyList<PropertyConversion> Conversions => _conversions;
+
+    public string? TableName => _tableName;
+
+    public IReadOnlyDictionary<string, string> ColumnNames => _columnNames;
+
+    /// <summary>
+    /// Sets the table name to use when exporting this entity.
+    /// </summary>
+    public EntityDefinition<T> ToTable(string tableName)
+    {
+        if (string.IsNullOrWhiteSpace(tableName))
+            throw new ArgumentException("Table name cannot be null or empty.", nameof(tableName));
+        _tableName = tableName;
+        return this;
+    }
 
     /// <summary>
     /// Sets the key property using an expression (e.g. c => c.Id).
@@ -154,6 +171,11 @@ public sealed class EntityDefinition<T> : IEntityDefinition where T : class
         // Replace existing conversion for the same property
         _conversions.RemoveAll(c => c.PropertyName == conversion.PropertyName);
         _conversions.Add(conversion);
+    }
+
+    internal void AddColumnName(string propertyName, string columnName)
+    {
+        _columnNames[propertyName] = columnName;
     }
 
     private static MemberInfo? GetMemberFromExpression(LambdaExpression expr)

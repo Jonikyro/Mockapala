@@ -9,15 +9,19 @@ namespace Mockapala.Export;
 /// </summary>
 public sealed class ExportableProperty
 {
-    public ExportableProperty(PropertyInfo property, Type effectiveType, Func<object?, object?>? converter)
+    public ExportableProperty(PropertyInfo property, Type effectiveType, Func<object?, object?>? converter, string? columnName = null)
     {
         Property = property;
         EffectiveType = effectiveType;
         Converter = converter;
+        ColumnName = columnName ?? property.Name;
     }
 
     /// <summary>The source property on the entity.</summary>
     public PropertyInfo Property { get; }
+
+    /// <summary>The column name to use when exporting. Defaults to the property name.</summary>
+    public string ColumnName { get; }
 
     /// <summary>The type to use for column/parameter inference (converted type if a conversion exists, otherwise the property type).</summary>
     public Type EffectiveType { get; }
@@ -45,6 +49,8 @@ public sealed class ExportableProperty
                 conversionByName[c.PropertyName] = c;
         }
 
+        var columnNames = definition?.ColumnNames;
+
         var result = new List<ExportableProperty>();
         var properties = entityType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
@@ -53,17 +59,17 @@ public sealed class ExportableProperty
             if (!prop.CanRead || !prop.CanWrite)
                 continue;
 
+            string? colName = null;
+            columnNames?.TryGetValue(prop.Name, out colName);
+
             if (conversionByName.TryGetValue(prop.Name, out var conversion))
             {
-                // Property has a conversion — always exportable, use converted type
-                result.Add(new ExportableProperty(prop, conversion.ConvertedType, raw => raw != null ? conversion.Converter(raw) : null));
+                result.Add(new ExportableProperty(prop, conversion.ConvertedType, raw => raw != null ? conversion.Converter(raw) : null, colName));
             }
             else if (IsScalarType(prop.PropertyType))
             {
-                // Scalar property without conversion — exportable as-is
-                result.Add(new ExportableProperty(prop, prop.PropertyType, null));
+                result.Add(new ExportableProperty(prop, prop.PropertyType, null, colName));
             }
-            // Non-scalar without conversion — skip
         }
 
         return result;

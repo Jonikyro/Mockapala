@@ -24,4 +24,14 @@ public interface IEntityDefinition
     /// Returns the property conversions declared on this entity.
     /// </summary>
     IReadOnlyList<PropertyConversion> Conversions { get; }
+
+    /// <summary>
+    /// Optional table name for export. When null, exporters use Type.Name or their own resolver.
+    /// </summary>
+    string? TableName { get; }
+
+    /// <summary>
+    /// Optional column name overrides for export. Maps property name to column name.
+    /// </summary>
+    IReadOnlyDictionary<string, string> ColumnNames { get; }
 }
